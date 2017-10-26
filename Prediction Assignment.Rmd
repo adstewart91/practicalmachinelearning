@@ -4,8 +4,7 @@ title: "Prediction Assignment Writeup"
 output: 
   html_document:
     keep_md: true
-https://htmlpreview.github.io/?https://adstewart91.github.io/practicalmachinelearning/Prediction_Assignment.html
-
+    
 ---
 ## Synopsis: 
 This analysis examines the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  This project's goal is to use the data from the sensors to train a model that can predict how well the activity was performed.
@@ -19,10 +18,20 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
   
 The data for this project come from this source:
 http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.  
+
+
+## What You Should Submit: (Quoted from Assignment)
+(1) You should create a report describing how you built your model, 
+(2) how you used cross validation, 
+(3) what you think the expected out of sample error is, and 
+(4) why you made the choices you did. 
+(5) You will also use your prediction model to predict 20 different test cases.
   
 
-## Load Libraries
+## Load Libraries and Set Defaults
+This section loads R Libraries, sets knitr defaults for output, and sets a random seed (4891) to support reproducabilty.  See markdown file for actual code.
 ```{r libraries, echo=FALSE, results="hide", message=FALSE, warning = FALSE}
+
 library(caret)
 library(data.table)
 library(dplyr)
@@ -40,17 +49,24 @@ library(knitr)
 library(kableExtra)
 library(htmlTable)
 
-```
-
-
-## Loading and Preprocessing the Data
-
-```{r Load Testing and Training Data, echo = TRUE, results = "markup"}
 knitr::opts_chunk$set(echo = TRUE, results = "asis")
 knit_hooks$set(webgl = hook_webgl)
 
 ## Center Justify All Plot Titles for ggplot
 theme_update(plot.title = element_text(hjust = 0.5))
+
+## Random Seed
+set.seed(4891)
+
+```
+
+## Question 1  
+### Part a - Loading and Preprocessing the Data  
+First the Training data for the model must be read in from the data sources identified above.  Next, *all columns* of the data that contain sensor-subject summary data (kurtosis, skewness, max, min, amplitude, var, avg, stddev) are removed since my approach was to use only the actual sensor data.  The first seven (7) columns were also removed as they contained identifying information (e.g.: subject name) that were also not relevant for a model based on sensor data.  
+
+Finally, the Training data was partitioned into two sets (70% / 30%) to support model development on the first set (70%) and *Cross Validation* on the second set (30%).
+
+```{r Load Testing and Training Data, echo = TRUE, results = "markup"}
 
 ## Read activity.csv and format as tbl_df
 actyTrainData <- read.csv("pml-training.csv", header = TRUE)
@@ -77,8 +93,8 @@ training1 = filtertraindata[inTrain,]
 training2 = filtertraindata[-inTrain,]
 ```
 
-
-## Train the Model as Random Forest
+## Question 1  
+### Part b - Train the Model as Random Forest
 ```{r Traing Model, echo = TRUE, cache = TRUE, results = "markup"}
 ## Parallel Cluster Code from Class Forum/Discusson on methods using Parallel Processing:
 ## Class Forum notes references the following github repo:
@@ -101,7 +117,7 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
-## Perform Model Review and Cross Validation:
+## Question 2 - Perform Model Review and Cross Validation:
 
 ```{r Review and Cross Validation, echo = TRUE, results = "markup" }
 
@@ -110,18 +126,27 @@ registerDoSEQ()
 conMatrix <- confusionMatrix(training1$classe, fit2$finalModel$predicted)
 print(conMatrix)
 
-## out of bag error estimates
-mean(fit2$finalModel$err.rate[,"OOB"])
-
 ## Cross-Validate Model with 2nd Training Set:
 predictTrain2 <- predict(fit2, newdata=training2)
 conMatrix <- confusionMatrix(predictTrain2, training2$classe)
 print(conMatrix)
+```
+
+## Question 3 - Expected Out of Sample Error
+
+
+```{r}
+
+## out of bag error estimates
+mean(fit2$finalModel$err.rate[,"OOB"])
 
 
 ```
 
-## Plots of Training Data
+## Question 4 - Model Choice Review
+### And, Plots of Training Data
+
+
 ```{r Plots, webgl=TRUE, echo = FALSE, results = "markup" }
 
 ## Plots
@@ -134,15 +159,14 @@ qplot(roll_belt, pitch_belt, color=classe, data=training1, main="Training Set ro
 
 qplot(roll_belt, magnet_dumbbell_z, color=classe, data=training1, main="Training Set roll_belt and magnet_dumbbell_z")
 
-threeDplot <- with(training1, plot3d(pitch_belt, roll_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="** Use Mouse/Cursor to Move and Rotate **"))
+threeDplot <- with(training1, plot3d(pitch_belt, roll_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="***** Use Mouse/Cursor to Zoom, Move, and Rotate *****"))
 
 legend3d("right", pch = 19, yjust=0, cex=0.75, legend = levels(training1$classe), col = (1 + seq_along(levels(training1$classe))))
 
 ```
 
 
-## Model Prediction Against Test Set
-
+## Question 5 - Model Prediction Against Test Set
 ```{r Prediction of Test Data, echo = TRUE, results = "markup"}
 ## Read and Filter Test Data:
 actyTestData <- read.csv("pml-testing.csv", header = TRUE)
@@ -164,3 +188,8 @@ pandoc.table(pred, style = "rmarkdown")
 ## Results Submitted to Quiz -- 100%!!
 
 ```
+## Located at:
+
+https://adstewart91.github.io/practicalmachinelearning/Prediction_Assignment.html
+
+https://htmlpreview.github.io/?https://adstewart91.github.io/practicalmachinelearning/Prediction_Assignment.html
