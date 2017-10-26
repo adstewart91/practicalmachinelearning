@@ -4,6 +4,8 @@ title: "Prediction Assignment Writeup"
 output: 
   html_document:
     keep_md: true
+https://htmlpreview.github.io/?https://adstewart91.github.io/practicalmachinelearning/Prediction_Assignment.html
+
 ---
 ## Synopsis: 
 This analysis examines the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  This project's goal is to use the data from the sensors to train a model that can predict how well the activity was performed.
@@ -132,9 +134,9 @@ qplot(roll_belt, pitch_belt, color=classe, data=training1, main="Training Set ro
 
 qplot(roll_belt, magnet_dumbbell_z, color=classe, data=training1, main="Training Set roll_belt and magnet_dumbbell_z")
 
-##threeDplot <- with(training1, plot3d(pitch_belt, roll_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="** Use Mouse/Cursor to Move and Rotate **"))
+threeDplot <- with(training1, plot3d(pitch_belt, roll_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="** Use Mouse/Cursor to Move and Rotate **"))
 
-##legend3d("right", pch = 19, yjust=0, cex=0.75, legend = levels(training1$classe), col = (1 + seq_along(levels(training1$classe))))
+legend3d("right", pch = 19, yjust=0, cex=0.75, legend = levels(training1$classe), col = (1 + seq_along(levels(training1$classe))))
 
 ```
 
