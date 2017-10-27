@@ -6,8 +6,15 @@ output:
     keep_md: true
     
 ---
+Author: Andrew D. Stewart  
+Title: Prediction Assignment Write up  
+10/26/2017  
+
 ## Synopsis: 
-This analysis examines the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  This project's goal is to use the data from the sensors to train a model that can predict how well the activity was performed.
+This analysis examines the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.  This project's goal is to use the data from the sensors to train a model that can predict how well the activity was performed.  An **interactive 3-D plot** and 2-D plots are provided to visualize the variable importance and classification of the Training Data set to the calculated prediction model.  
+
+**Total Number of Words: 1,231  
+Total Number of Figures: 5**  
 
 ### Data
 The training data for this project are available here:
@@ -16,7 +23,7 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
 The test data are available here:
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv  
   
-The data for this project come from this source:
+The description of the data for this project come from this source:
 http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.  
 
 
@@ -60,11 +67,11 @@ set.seed(4891)
 
 ```
 
-## Question 1  
+## Question 1 - Model Build  
 ### Part a - Loading and Preprocessing the Data  
-First the Training data for the model must be read in from the data sources identified above.  Next, *all columns* of the data that contain sensor-subject summary data (kurtosis, skewness, max, min, amplitude, var, avg, stddev) are removed since my approach was to use only the actual sensor data.  The first seven (7) columns were also removed as they contained identifying information (e.g.: subject name) that were also not relevant for a model based on sensor data.  
+First the Training data for the model must be read in from the data sources identified above.  Next, *all columns* of the data that contain sensor-subject summary data (kurtosis, skewness, max, min, amplitude, var, avg, stddev) are removed since the approach was to use only the actual sensor data (and remove NA data).  The first seven (7) columns were also removed as they contain identifying information (e.g.: subject name) that were also not relevant for a model based only on sensor data.  
 
-Finally, the Training data was partitioned into two sets (70% / 30%) to support model development on the first set (70%) and *Cross Validation* on the second set (30%).
+Finally, the Training data was partitioned into two sets (70% / 30%) to support model development on the first set (70%) and *Cross Validation* on the second set (30%).  Later, for the chosen Random Forest model, this was shown not to be necessary; but was insightful for understanding the model's overvall performance.
 
 ```{r Load Testing and Training Data, echo = TRUE, results = "markup"}
 
@@ -93,16 +100,25 @@ training1 = filtertraindata[inTrain,]
 training2 = filtertraindata[-inTrain,]
 ```
 
-## Question 1  
-### Part b - Train the Model as Random Forest
+## Question 1 - Model Build   
+### Part b - Train the Model as Random Forest  
+The outcome variable is a classification variable (**classe**) with character values 'A' (perfect) through 'E' that represent the spectrum of how participants were directed to perform the exercise (see the link above for a detailed description of each classe). The sensor data from each of the 4 accelerators produces readings across yaw, pitch, and roll data; and gyro and acceleration in the x, y, and z directions -- together, 52 columns of data, 1 column of results and 19,622 observations.  Hence, there is a significant amount of data in the Training Set.
+
+A basic classification tree `rpart` was initially used as an exploratory modeling approach; however, the basic classification tree results produced low accuracy results.  Subsequently, modeling the data with a Random Forest produced superior results.  Some experimentation with principle component analysis (PCA) was conducted; however, this did not produce any more accurate results than the Random Forest model which allows bootstrapping and voting across the many, many trees created by this robust modeling approach. 
+
+Although the Random Forest is computationally more expensive, the **Coursera Class Forum Notes** references provided the following github repo which showed a method on how to use parallel processing to enhance processing time:
+## https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md
+
 ```{r Traing Model, echo = TRUE, cache = TRUE, results = "markup"}
 ## Parallel Cluster Code from Class Forum/Discusson on methods using Parallel Processing:
 ## Class Forum notes references the following github repo:
 ## https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md
 
+## System Info:  Processor Name: Intel Core i7, Processor Speed:2.6 GHz, Number of Processors: 1, Total Number of Cores: 4, L2 Cache (per Core): 256 KB, L3 Cache: 6 MB, Memory: 16 GB
+
 ## Also, had to use: devtools::install_github('topepo/caret/pkg/caret') to update caret
 
-## Set up Parallel Cluster  -- Allow one (1) core for MAC-OS:
+## Set up Parallel Cluster  -- Allowing one (1) core for MAC-OS:
 cluster <- makeCluster(detectCores() - 1) 
 registerDoParallel(cluster)
 
@@ -117,7 +133,14 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
-## Question 2 - Perform Model Review and Cross Validation:
+## Question 2 - Perform Model Review and Cross Validation:  
+Again, Random Forest iteratively  generates multiple random trees from the training data with replacement/bootstrapping and provides the miscalculation rate for each tree in order to vote for each tree.  Hence, splitting the training set is not necessarily required for Cross Validation.  
+
+Nevertheless, since the Training Set data had already been partitioned (70% / 30%) from previous model exploration, another Cross Validation step was taken against the second Training Set Partition in order to validate the model's results in advance on applying the model to the Test Data Set.
+
+Reviewing the confusion matrix for the first Training Set, the model's accuracy is above 99%, is statistically significant, with specificity above 99% across 4/5 classes, and performs especially well at predicting **classe 'E'** and **class 'A'** results.
+
+Comparing the confusion matrix for the first Training Set with the cross-validated results of the second Training Set produces similar results -- which is expected from the Random Forest model which essentially cross-validates internally to the Training Set from which it is created by Bagging (Bootstrap Aggregating).  These results reinforced the accuracy of and confidence in the model.
 
 ```{r Review and Cross Validation, echo = TRUE, results = "markup" }
 
@@ -133,19 +156,21 @@ print(conMatrix)
 ```
 
 ## Question 3 - Expected Out of Sample Error
+The Random Forest builds on the Training Set data with each randomly chosen tree being compared to approx. one-third of the data not used in that tree. This error is the Out Of Bag Error Estimate of that particular tree in the random forest.  The misclassification rate, or out of bag (OOB) error rate, can be aggregated across all trees for the overall expected OOB error rate.  
 
-
-```{r}
-
-## out of bag error estimates
+For this model, this is calculated from the mean of the chosen final model's OOB error rate, which is: 1.23%.  Note that this is approximately twice (1 - Accuracy) of the cross-validated 2nd Training Set. Again, this provides high-confidence for running the model against the Test Data.  
+```{r OOB Sample Error}
+## Out Of Bag error estimates
 mean(fit2$finalModel$err.rate[,"OOB"])
-
-
 ```
 
 ## Question 4 - Model Choice Review
-### And, Plots of Training Data
+### And, 2-D and 3-D Plots of the Training Data
+Besides the overwhelmingly positive statistical and numerical results above, visual inspection of the data via graphs enforces the decision making process. The first plot (Variable Importance Plot) shows the variables that the top four variables are:  roll_belt, yaw_belt, magnet_dumbbell_z, and pitch_belt for mean decrease in accuracy and Gini.  After these four variables, the remainder "center and lower" variables both continue to play key importance in accuracy and Gini. Given that parallel processing allows for a *relatively* quick processing of the model and that previous principle component analysis did not improve model performance, this validated keeping all 52 variables/observations.   
 
+The next three plots show the clustering of the classe types for the four top-most influential variables. Model performance against classe 'A' and 'E' is not surprising given the the distinct grouping of these classes in these plots.  
+
+While 2-D plots are helpful, the last plot, a **3-D Interactive Plot**, provides even more insight when grouping classification across 3-axis.  Note that this plot can be **moved/rotated and zoomed-in/out** to see different 3-d groupings and views.  'E' Classification becomes even more obvious and more tightly classifications of the other variables becomes easier to see -- and underlines the need for additional variables to classify the more tightly grouped classes.
 
 ```{r Plots, webgl=TRUE, echo = FALSE, results = "markup" }
 
@@ -159,14 +184,17 @@ qplot(roll_belt, pitch_belt, color=classe, data=training1, main="Training Set ro
 
 qplot(roll_belt, magnet_dumbbell_z, color=classe, data=training1, main="Training Set roll_belt and magnet_dumbbell_z")
 
-threeDplot <- with(training1, plot3d(pitch_belt, roll_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="***** Use Mouse/Cursor to Zoom, Move, and Rotate *****"))
+threeDplot <- with(training1, plot3d(roll_belt, pitch_belt, yaw_belt, col = (as.numeric(classe)+1), pch=19, main="Rotate-able 3D Plot of Training Set for pitch_belt, roll_belt, yaw_belt by Classe Type", sub="***** Use Mouse/Cursor to Zoom, Move, and Rotate *****"))
 
 legend3d("right", pch = 19, yjust=0, cex=0.75, legend = levels(training1$classe), col = (1 + seq_along(levels(training1$classe))))
 
 ```
 
-
 ## Question 5 - Model Prediction Against Test Set
+The Test Set is read-in from the Data as identified above.  The Test Data Set is filtered exactly as the Training Data Set was by removing the columns associated with summary statistical data (kurtosis, skewness, max, min, amplitude, var, avg, stddev) and removing the first seven (7) columns of data that do not contain sensor information.  Each row of the data corresponds to the associated Quiz question number/observation.  
+
+Prediction on the Test Data Set is run by simply using the `predict` function and the model developed above.  The results were submitted to the Quiz and produced **100% correct results**.
+
 ```{r Prediction of Test Data, echo = TRUE, results = "markup"}
 ## Read and Filter Test Data:
 actyTestData <- read.csv("pml-testing.csv", header = TRUE)
@@ -188,7 +216,7 @@ pandoc.table(pred, style = "rmarkdown")
 ## Results Submitted to Quiz -- 100%!!
 
 ```
-## Located at:
+### This repo is located at:
 
 https://adstewart91.github.io/practicalmachinelearning/Prediction_Assignment.html
 
